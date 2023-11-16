@@ -1,0 +1,10 @@
+Directions for manipulation of EVT dataset
+
+Add fire ignition dates for each fire
+
+Calculate mean NDVI, NDMI, NDWI for each point in dataset for the 3 months leading up to the fire ignition dates
+
+Add columns to data set
+  Mean and Median: NDVI, NDMI, NDWI
+
+
