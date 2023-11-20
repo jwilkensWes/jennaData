@@ -12,6 +12,17 @@ from ee_plugin import Map
 l8sr = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') ## land 8
 # bands needed for indexs
 l8bands = ['SR_B5', 'SR_B4', 'SR_B6', 'SR_B3']
+
+def make_ndvi_lan8(image):
+    nir = image.select('SR_B5')
+    red = image.select('SR_B4')
+    ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI')
+    return ndvi
+def cloud_mask_lan8(img):
+    cloud_mask = img.select('QA_PIXEL').bitwiseAnd(ee.Number.parse('0000001111', 2)).eq(0)
+    return(img.select(l8bands).updateMask(cloud_mask))
+l8cloud = l8sr.map(cloud_mask_lan8)
+l8ndvi = l8cloud.map(make_ndvi_lan8)
 # random points in fire areas
 pts = ee.FeatureCollection('projects/poulos-gee/assets/fire_ign')
 # the first point in dataset
@@ -22,26 +33,25 @@ def buf(col):
     pt = ee.Feature(col).buffer(15)
     return(pt)
 
-# zonal stats
-def zonal_ndvi(col):
-    ign = col.get('ignitiondate')
-    mon3 = col.get('prior3m_ign')
-    img = l8ndvi.filterDate(mon3, ign)
-    
-    def zone(imgcol):
-        reg = imgcol.reduceRegions(
-                reducer = ee.Reducer.mean(),
-                collection = col,
-                scale = 30)
-        return reg
-    
-    zstat = img.map(zone)
-    return zstat
+col = ee.Feature(ptx).buffer(15)
+ign = ee.Date(col.get('ignitiondate')) # ee.Date(col.get(....))
+mon3 = ee.Date(col.get('prior3m_ign'))
 
+img = l8ndvi.filterBounds(col.geometry()).filterDate(mon3, ign)
+print(img.getInfo())
+
+Map.addLayer(img)
+
+def zone(imgcol):
+    reg = imgcol.reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = col.geometry(),
+            scale = 30)
+    return ee.Feature(col.geometry(), reg)
 
 
 ## Add Desired Layers to Map
-Map.addLayer(pt)
+# Map.addLayer(pt)
 
 """
 def make_ndvi_lan8(image):
