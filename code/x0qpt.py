@@ -23,6 +23,8 @@ def cloud_mask_lan8(img):
     return(img.select(l8bands).updateMask(cloud_mask))
 l8cloud = l8sr.map(cloud_mask_lan8)
 l8ndvi = l8cloud.map(make_ndvi_lan8)
+tndvi = l8sr.map(make_ndvi_lan8)
+
 # random points in fire areas
 pts = ee.FeatureCollection('projects/poulos-gee/assets/fire_ign')
 # the first point in dataset
@@ -33,14 +35,24 @@ def buf(col):
     pt = ee.Feature(col).buffer(15)
     return(pt)
 
-col = ee.Feature(ptx).buffer(15)
+tpt = ee.Feature(ee.Geometry.Point([-112.2599178, 36.48981674])).set('objectid', '99').set('fire', 'castle').set('category', 'castle 99').set('ignitiondate', '2019-07-12').set('prior3m_ign', '2019-04-12')
+ptx = pts.first()
+col = ee.Feature(tpt).buffer(15)
 ign = ee.Date(col.get('ignitiondate')) # ee.Date(col.get(....))
 mon3 = ee.Date(col.get('prior3m_ign'))
 
-img = l8ndvi.filterBounds(col.geometry()).filterDate(mon3, ign)
+img = tndvi.filterBounds(col.geometry())
+img = img.filterDate(mon3, ign)
+# img = img.filterDate    
 print(img.getInfo())
 
-Map.addLayer(img)
+start = ee.Date('2019-05-01')
+end = ee.Date('2019-06-01')
+
+img = l8sr.filterDate(start, end)
+
+Map.addLayer(img.first())
+
 
 def zone(imgcol):
     reg = imgcol.reduceRegion(
